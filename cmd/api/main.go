@@ -19,7 +19,10 @@ type config struct {
 	port int
 	env  string
 	db   struct {
-		dsn string
+		dsn          string
+		maxOpenConns int
+		maxIdleConns int
+		maxIdleTime  time.Duration
 	}
 }
 
@@ -35,12 +38,15 @@ func main() {
 	flag.StringVar(&cfg.env, "environment", "development", "Environment (development|staging|production)")
 
 	flag.StringVar(&cfg.db.dsn, "dsn", "postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable", "Postgres connection DSN")
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "Postgres connection pool max open connections")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "Postgres connection pool max idle connections")
+	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "Postgres connection pool max connection idle time")
 
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	db, err := openDB(cfg.db.dsn)
+	db, err := openDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -71,12 +77,16 @@ func main() {
 	os.Exit(1)
 }
 
-func openDB(dsn string) (*sql.DB, error) {
+func openDB(cfg config) (*sql.DB, error) {
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
 		return nil, err
 	}
+
+	db.SetConnMaxIdleTime(cfg.db.maxIdleTime)
+	db.SetMaxIdleConns(cfg.db.maxIdleConns)
+	db.SetMaxOpenConns(cfg.db.maxOpenConns)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
