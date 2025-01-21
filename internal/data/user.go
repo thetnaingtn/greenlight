@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/thetnaingtn/greenlight/internal/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -52,6 +53,33 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func ValidateEmail(v *validator.Validator, email string) {
+	v.Check(email != "", "email", "must be provided")
+	v.Check(validator.Match(email, validator.EmailRX), "email", "must be a valid email address")
+}
+
+func ValidatePasswordPlaintext(v *validator.Validator, password string) {
+	v.Check(password != "", "password", "must be provided")
+	v.Check(len(password) >= 8, "password", "must be at least 8 bytes long")
+	v.Check(len(password) <= 72, "password", "must not be more than 72 bytes long")
+}
+
+func ValidateUser(v *validator.Validator, user *User) {
+	v.Check(user.Name != "", "name", "must be provided")
+	v.Check(user.Email != "", "email", "must be provided")
+	v.Check(user.Password.plaintext != nil, "password", "must be provided")
+
+	ValidateEmail(v, user.Email)
+
+	if user.Password.plaintext != nil {
+		ValidatePasswordPlaintext(v, *user.Password.plaintext)
+	}
+
+	if user.Password.hash == nil {
+		panic("missing password hash for user")
+	}
 }
 
 type UserModel struct {
