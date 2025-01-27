@@ -13,6 +13,7 @@ import (
 
 var (
 	ErrDuplicateEmail = errors.New("duplicate email")
+	AnonymousUser     = &User{}
 )
 
 type User struct {
@@ -114,7 +115,7 @@ func (m UserModel) Insert(user *User) error {
 
 func (m UserModel) GetByEmail(email string) (*User, error) {
 	query := `
-		SELECT id, created_at, name, email, hashed_password, activated, version
+		SELECT id, created_at, name, email, password_hash, activated, version
 		FROM users
 		WHERE email = $1
 	`
@@ -197,4 +198,8 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 	}
 
 	return &user, nil
+}
+
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
 }
