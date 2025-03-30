@@ -7,7 +7,6 @@ import (
 )
 
 func TestRateLimitMiddleware(t *testing.T) {
-
 	application := application{
 		config: config{
 			limiter: struct {
